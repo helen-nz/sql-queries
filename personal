@@ -1,6 +1,3 @@
---Here are examples of queries I wrote for HackerRank & LeetCode challenges
---I included a summary of the challenge objectives and my approach to solving the challenges
-
 --#1: getting each team's final scores based on matches played
 --approach: left join with case functions
 
