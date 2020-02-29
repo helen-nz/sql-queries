@@ -1,0 +1,69 @@
+--Here are examples of queries I wrote for HackerRank & LeetCode challenges
+--I included a summary of the challenge objectives and my approach to solving the challenges
+
+--#1: getting each team's final scores based on matches played
+--approach: left join with case functions
+
+select
+a.team_id, a.team_name,
+sum(case
+when b.host_goals=b.guest_goals and a.team_id=b.host_team then 1
+when b.host_goals=b.guest_goals and a.team_id=b.guest_team then 1
+when b.host_goals>b.guest_goals and a.team_id=b.host_team then 3
+when b.host_goals<b.guest_goals and a.team_id=b.guest_team then 3
+else 0
+end) as num_points
+from teams a 
+left join matches b
+on a.team_id=b.host_team
+or a.team_id=b.guest_team
+group by a.team_id, a.team_name
+order by num_points desc, a.team_id asc
+
+
+--#2: getting the most recent price of a product as of a given date
+--approach: window function with rank() and union
+
+select product_id, new_price as price 
+from
+(select product_id, new_price, change_date,
+rank() over (partition by product_id order by change_date desc) as rank
+ from products
+where change_date<= '2019-08-16') a
+where rank=1
+
+union
+
+select product_id, 10 as price 
+ from products
+where product_id not in
+(select distinct product_id from products 
+ where change_date<= '2019-08-16') 
+ 
+
+--#3: count transactions given column conditions
+--approach: nested if() in aggregate function with date_format
+
+select 
+date_format(trans_date, ""%Y-%m"") as month, 
+country, 
+count(state) as trans_count,
+sum(if(state=""approved"",1,0)) as approved_count,
+sum(amount) as trans_total_amount,
+sum(if(state=""approved"", amount, 0)) as approved_total_amount
+from transactions
+group by month, country
+
+
+--#4: exchanging adjacent ids to swap student's seats
+--approach: case function with mod()
+
+select
+case
+when mod(id,2) = 0 then id-1
+when mod(id,2) = 1 and id=(select max(id) from seat) then id
+when mod(id,2) = 1 and id<(select max(id) from seat) then id+1
+end as id,
+student
+from seat
+order by id asc
