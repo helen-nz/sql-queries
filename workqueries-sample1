@@ -1,0 +1,75 @@
+# QUERY 1
+active_users="""
+    create temp table DR1_active_users_{active_months}_months as (
+    select user_id
+    from (select  user_id,
+                  listagg(distinct month, ', ') WITHIN GROUP (ORDER BY month asc) as month_concat
+          from stg_data_genie.fiveday_active_users_vw
+          where date_count>5
+          and month >= '{min_month}'
+          group by 1)
+    where month_concat='{active_months_str}');
+    """.format(min_month=min_month,
+               active_months=active_months, 
+               active_months_str=active_months_str)
+               
+# QUERY 2
+data_request1="""
+{active_users}
+
+drop table if exists {tablename};
+
+create table {tablename} AS (
+select  distinct a.user_id::INTEGER as user_id
+        , case when a.event_name in ('pageView', 'PAGE_VIEW') then 'pageView' else event_name end as event_name
+        {attributes_v1}
+from analytics.extension_events a
+left join prd_edw.user_answers b
+on a.user_id=b.user_id
+left join analytics.extension_event_items c
+on a.id=c.event_id
+where b.user_id IS NULL
+and DATE(a."timestamp") between '{start_date}' and '{end_date}'
+and ({string_v1})
+union
+select  distinct a.uid::INTEGER as user_id
+        , case when evn in ('pageView', 'PAGE_VIEW') then 'pageView' else evn end as event_name
+        {attributes_v2}
+from amtr.desktop_parquet_daily a
+left join prd_edw.user_answers b
+on a.uid=b.user_id
+where b.user_id IS NULL
+and DATE(ts/1000 * INTERVAL '1 second' + timestamp 'epoch') between '{start_date}' and '{end_date}'
+and ({string_v2})
+union
+select  distinct a.user_id::INTEGER
+        , case when event_name in ('pageView', 'PAGE_VIEW') then 'pageView' else event_name end as event_name
+        {attributes_v3}
+from upsolver.mobile_events a
+left join prd_edw.user_answers b
+on a.user_id=b.user_id
+where b.user_id IS NULL
+and DATE("timestamp"/1000 * INTERVAL '1 second' + timestamp 'epoch') between '{start_date}' and '{end_date}'
+and ({string_v3}));
+
+select  event_name
+        {attributes_v3}
+        , count(distinct a.user_id) as user_count
+        , sum(count(distinct a.user_id)) over (partition by event_name) as eventname_user_count
+        , sum(count(distinct a.user_id)) over () as total_user_count
+from {tablename} a
+{active_users_join}
+group by 1 {grouping};
+
+""".format(tablename=tablename,
+           start_date=start_date, 
+           end_date=end_date, 
+           active_users=active_users,
+           attributes_v1=attributes_v1,
+           attributes_v2=attributes_v2,
+           attributes_v3=attributes_v3,
+           string_v1=string_v1,
+           string_v2=string_v2,
+           string_v3=string_v3,
+           active_users_join=active_users_join,
+           grouping=grouping)
