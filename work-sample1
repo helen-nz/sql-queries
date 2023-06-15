@@ -1,4 +1,4 @@
-# QUERY 1
+# QUERY 1 (written in Python with input variables; table names have been changed)
 active_users="""
     create temp table DR1_active_users_{active_months}_months as (
     select user_id
@@ -13,7 +13,7 @@ active_users="""
                active_months=active_months, 
                active_months_str=active_months_str)
                
-# QUERY 2
+# QUERY 2 (written in Python with input variables; table names have been changed)
 data_request1="""
 {active_users}
 
