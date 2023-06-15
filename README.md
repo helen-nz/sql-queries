@@ -1,3 +1,4 @@
 # sql-queries
 Sample Queries
-These queries were written on Python with variables.
+Personal queries are queries I wrote for demonstration/practice purposes
+Work queries are queries I wrote at work with table names changed
